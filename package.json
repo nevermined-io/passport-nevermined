@@ -2,7 +2,6 @@
   "name": "@nevermined-io/passport-nevermined",
   "version": "0.1.0",
   "description": "Nevermined passport strategy",
-  "main": "./dist/index.js",
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
@@ -10,6 +9,11 @@
   },
   "author": "Nevermined <root@nevermined.io>",
   "homepage": "https://github.com/nevermined-io/passport-nevermined",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "/dist"
+  ],
   "scripts": {
     "build": "tsc",
     "lint": "eslint ./",
