@@ -6,8 +6,9 @@ export interface ClientAssertion {
   client_assertion: string
 }
 
-export type JWTPayload = jose.JWTPayload
+export const CLIENT_ASSERTION_TYPE = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
 
+export type JWTPayload = jose.JWTPayload
 export class JwtEthVerifyError extends Error {}
 
 const recoverPublicKey = (protectedHeader: string, payload: string, signature: string) => {
