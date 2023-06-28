@@ -6,16 +6,52 @@ export interface ClientAssertion {
   client_assertion: string
 }
 
+export interface Eip712Data {
+  message: string
+  chainId: number
+}
+
 export const CLIENT_ASSERTION_TYPE = 'urn:ietf:params:oauth:client-assertion-type:jwt-bearer'
 
 export type JWTPayload = jose.JWTPayload
 export class JwtEthVerifyError extends Error {}
 
-const recoverPublicKey = (protectedHeader: string, payload: string, signature: string) => {
+const recoverPublicKey = (
+  protectedHeader: string,
+  payload: string,
+  signature: string,
+  jwtPayload: JWTPayload,
+) => {
   const signatureInput = `${protectedHeader}.${payload}`
   const signatureDecoded = `0x${Buffer.from(signature, 'base64').toString('hex')}`
 
-  const address = ethers.utils.verifyMessage(signatureInput, signatureDecoded)
+  const { eip712Data, iss } = jwtPayload
+
+  let address: string
+  if (eip712Data) {
+    const domain = {
+      name: 'Nevermined',
+      version: '1',
+      chainId: (eip712Data as Eip712Data).chainId,
+    }
+    const types = {
+      Nevermined: [
+        { name: 'from', type: 'address' },
+        { name: 'message', type: 'string' },
+        { name: 'token', type: 'string' },
+      ],
+    }
+    const value = {
+      from: iss,
+      message: (eip712Data as Eip712Data).message,
+      token: signatureInput,
+    }
+
+    address = ethers.utils.verifyTypedData(domain, types, value, signatureDecoded)
+  } else {
+    address = ethers.utils.verifyMessage(signatureInput, signatureDecoded)
+  }
+
   return ethers.utils.getAddress(address)
 }
 
@@ -39,17 +75,6 @@ export const jwtEthVerify = (jwt: string): JWTPayload => {
     throw new JwtEthVerifyError('ProtectedHeader: Invalid algorithm')
   }
 
-  // recover public key from signature
-  // This is the de-facto signature validation
-  let publicKey: string
-  try {
-    publicKey = recoverPublicKey(protectedHeader, payload, signature)
-  } catch (error) {
-    throw new JwtEthVerifyError(
-      `Signature: Failed to validate signature (${(error as Error).message})`,
-    )
-  }
-
   // verify the payload
   let parsedPayload: JWTPayload
   try {
@@ -59,6 +84,17 @@ export const jwtEthVerify = (jwt: string): JWTPayload => {
   }
   if (!parsedPayload.iss) {
     throw new JwtEthVerifyError('Payload: "iss" field is required')
+  }
+
+  // recover public key from signature
+  // This is the de-facto signature validation
+  let publicKey: string
+  try {
+    publicKey = recoverPublicKey(protectedHeader, payload, signature, parsedPayload)
+  } catch (error) {
+    throw new JwtEthVerifyError(
+      `Signature: Failed to validate signature (${(error as Error).message})`,
+    )
   }
 
   const isValidAddress = ethers.utils.isAddress(parsedPayload.iss)
