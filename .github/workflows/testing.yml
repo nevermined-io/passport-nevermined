@@ -37,7 +37,7 @@ jobs:
 
       - name: unit-tests
         env:
-          SEED_WORDS: ${{ secrets.seedWords }}
+          SEED_WORDS: ${{ secrets.TEST_MNEMONIC }}
         run: |
           nvm-tools copy-artifacts ./artifacts
           yarn test
