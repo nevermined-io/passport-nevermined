@@ -1,6 +1,6 @@
 {
   "name": "@nevermined-io/passport-nevermined",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Nevermined passport strategy",
   "license": "Apache-2.0",
   "repository": {
@@ -22,6 +22,7 @@
     "test": "jest"
   },
   "devDependencies": {
+    "@nevermined-io/sdk": "^1.5.3",
     "@types/jest": "^29.5.2",
     "@types/node": "^18.11.18",
     "@types/passport-strategy": "^0.2.35",
