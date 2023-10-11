@@ -22,7 +22,7 @@
     "test": "jest"
   },
   "devDependencies": {
-    "@nevermined-io/sdk": "^1.5.3",
+    "@nevermined-io/sdk": "^2.0.0-rc17",
     "@types/jest": "^29.5.2",
     "@types/node": "^18.11.18",
     "@types/passport-strategy": "^0.2.35",

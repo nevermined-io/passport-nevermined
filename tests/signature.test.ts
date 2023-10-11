@@ -2,7 +2,7 @@ import { Account, Nevermined } from '@nevermined-io/sdk'
 import { config } from './config'
 import { Strategy } from '../src/strategy'
 import { Request } from 'express'
-import { CLIENT_ASSERTION_TYPE } from '../src/jwt.utils'
+import { CLIENT_ASSERTION_TYPE, JWTPayload } from '../src/jwt.utils'
 
 describe('Test', () => {
   let nevermined: Nevermined
@@ -12,12 +12,13 @@ describe('Test', () => {
     nevermined = await Nevermined.getInstance(config)
     ;[account] = await nevermined.accounts.list()
   })
+
   test('test client assertion', async () => {
     const clientAssertion = await nevermined.utils.jwt.generateClientAssertion(account)
 
-    const strategy = new Strategy((payload: any) => {
+    const strategy = new Strategy({}, (payload: JWTPayload) => {
       expect(payload.iss).toBe(account.getId())
-    }, undefined)
+    })
 
     const mockRequest = {
       body: {
@@ -35,10 +36,10 @@ describe('Test', () => {
       'Hello Nevermined!',
     )
 
-    const strategy = new Strategy((payload: any) => {
+    const strategy = new Strategy({}, (payload: JWTPayload) => {
       expect(payload.iss).toBe(account.getId())
       expect(payload.eip712Data).toBeDefined()
-    }, undefined)
+    })
 
     const mockRequest = {
       body: {

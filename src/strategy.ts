@@ -15,7 +15,6 @@ export interface Options {
 
 export class Strategy extends passport.Strategy {
   name = 'nvm-login'
-  // TODO: Check the types
   _verify: (user: JWTPayload, verify: (err: Error, user: JWTPayload, info: number) => void) => void
   private readonly provider?: ethers.providers.JsonRpcProvider
 
