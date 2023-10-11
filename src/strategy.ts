@@ -10,7 +10,7 @@ import {
 import { ethers } from 'ethers'
 
 export interface Options {
-  web3ProviderUri?: string
+  web3ProviderUri: string
 }
 
 export class Strategy extends passport.Strategy {
@@ -22,9 +22,7 @@ export class Strategy extends passport.Strategy {
     super()
     this._verify = verify
 
-    if (options.web3ProviderUri) {
-      this.provider = new ethers.providers.JsonRpcProvider(options.web3ProviderUri)
-    }
+    this.provider = new ethers.providers.JsonRpcProvider(options.web3ProviderUri)
 
     passport.Strategy.call(this)
   }

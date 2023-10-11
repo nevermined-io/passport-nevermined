@@ -16,9 +16,12 @@ describe('Test', () => {
   test('test client assertion', async () => {
     const clientAssertion = await nevermined.utils.jwt.generateClientAssertion(account)
 
-    const strategy = new Strategy({}, (payload: JWTPayload) => {
-      expect(payload.iss).toBe(account.getId())
-    })
+    const strategy = new Strategy(
+      { web3ProviderUri: 'http://contracts.nevermined.localnet' },
+      (payload: JWTPayload) => {
+        expect(payload.iss).toBe(account.getId())
+      },
+    )
 
     const mockRequest = {
       body: {
@@ -36,10 +39,13 @@ describe('Test', () => {
       'Hello Nevermined!',
     )
 
-    const strategy = new Strategy({}, (payload: JWTPayload) => {
-      expect(payload.iss).toBe(account.getId())
-      expect(payload.eip712Data).toBeDefined()
-    })
+    const strategy = new Strategy(
+      { web3ProviderUri: 'http://contracts.nevermined.localnet' },
+      (payload: JWTPayload) => {
+        expect(payload.iss).toBe(account.getId())
+        expect(payload.eip712Data).toBeDefined()
+      },
+    )
 
     const mockRequest = {
       body: {
