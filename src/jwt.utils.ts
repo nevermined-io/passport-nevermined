@@ -1,3 +1,4 @@
+import { verifyMessage } from '@ambire/signature-validator'
 import { ethers } from 'ethers'
 import * as jose from 'jose'
 
@@ -16,18 +17,18 @@ export const CLIENT_ASSERTION_TYPE = 'urn:ietf:params:oauth:client-assertion-typ
 export type JWTPayload = jose.JWTPayload
 export class JwtEthVerifyError extends Error {}
 
-const recoverPublicKey = (
+const isValidSignature = (
   protectedHeader: string,
   payload: string,
   signature: string,
   jwtPayload: JWTPayload,
-) => {
+  provider?: ethers.providers.JsonRpcProvider,
+): Promise<boolean> => {
   const signatureInput = `${protectedHeader}.${payload}`
   const signatureDecoded = `0x${Buffer.from(signature, 'base64').toString('hex')}`
 
   const { eip712Data, iss } = jwtPayload
 
-  let address: string
   if (eip712Data) {
     const domain = {
       name: 'Nevermined',
@@ -47,15 +48,30 @@ const recoverPublicKey = (
       token: signatureInput,
     }
 
-    address = ethers.utils.verifyTypedData(domain, types, value, signatureDecoded)
+    return verifyMessage({
+      signer: iss,
+      signature: signatureDecoded,
+      typedData: {
+        types,
+        domain,
+        message: value,
+      },
+      provider,
+    })
   } else {
-    address = ethers.utils.verifyMessage(signatureInput, signatureDecoded)
+    return verifyMessage({
+      signer: iss,
+      signature: signatureDecoded,
+      message: signatureInput,
+      provider,
+    })
   }
-
-  return ethers.utils.getAddress(address)
 }
 
-export const jwtEthVerify = (jwt: string): JWTPayload => {
+export const jwtEthVerify = async (
+  jwt: string,
+  provider?: ethers.providers.JsonRpcProvider,
+): Promise<JWTPayload> => {
   const { 0: protectedHeader, 1: payload, 2: signature, length } = jwt.split('.')
 
   if (length !== 3) {
@@ -86,17 +102,6 @@ export const jwtEthVerify = (jwt: string): JWTPayload => {
     throw new JwtEthVerifyError('Payload: "iss" field is required')
   }
 
-  // recover public key from signature
-  // This is the de-facto signature validation
-  let publicKey: string
-  try {
-    publicKey = recoverPublicKey(protectedHeader, payload, signature, parsedPayload)
-  } catch (error) {
-    throw new JwtEthVerifyError(
-      `Signature: Failed to validate signature (${(error as Error).message})`,
-    )
-  }
-
   const isValidAddress = ethers.utils.isAddress(parsedPayload.iss)
   if (!isValidAddress) {
     throw new JwtEthVerifyError('Payload: "iss" field must be a valid ethereum address')
@@ -106,8 +111,18 @@ export const jwtEthVerify = (jwt: string): JWTPayload => {
     throw new JwtEthVerifyError('Payload: "iss" field must be a checksum address')
   }
 
-  if (parsedPayload.iss !== publicKey) {
-    throw new JwtEthVerifyError('Payload: "iss" is not the signer of the payload')
+  // validate the signature
+  let isValid: boolean
+  try {
+    isValid = await isValidSignature(protectedHeader, payload, signature, parsedPayload, provider)
+  } catch (error) {
+    throw new JwtEthVerifyError(
+      `Signature: Failed to validate signature (${(error as Error).message})`,
+    )
+  }
+
+  if (!isValid) {
+    throw new JwtEthVerifyError('Signature: Invalid signature.')
   }
 
   return parsedPayload

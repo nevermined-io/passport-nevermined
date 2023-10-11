@@ -1,37 +1,44 @@
 import { Request } from 'express'
-import { ParamsDictionary } from 'express-serve-static-core'
 import * as passport from 'passport-strategy'
-import { ParsedQs } from 'qs'
 import {
   ClientAssertion,
   CLIENT_ASSERTION_TYPE,
   jwtEthVerify,
   JwtEthVerifyError,
+  JWTPayload,
 } from './jwt.utils'
+import { ethers } from 'ethers'
+
+export interface Options {
+  web3ProviderUri?: string
+}
 
 export class Strategy extends passport.Strategy {
   name = 'nvm-login'
   // TODO: Check the types
-  _verify: any
+  _verify: (user: JWTPayload, verify: (err: Error, user: JWTPayload, info: number) => void) => void
+  private readonly provider?: ethers.providers.JsonRpcProvider
 
-  constructor(options: any, _verify: any) {
+  constructor(options: Options, verify: (user: JWTPayload) => void) {
     super()
-    this._verify = options
+    this._verify = verify
+
+    if (options.web3ProviderUri) {
+      this.provider = new ethers.providers.JsonRpcProvider(options.web3ProviderUri)
+    }
+
     passport.Strategy.call(this)
   }
 
-  async authenticate(
-    req: Request<ParamsDictionary, any, any, ParsedQs, Record<string, any>>,
-    _options?: any,
-  ) {
+  async authenticate(req: Request, _options?: unknown) {
     const clientAssertion: ClientAssertion = req.body
     if (clientAssertion.client_assertion_type !== CLIENT_ASSERTION_TYPE) {
       return this.fail('Invalid "client_assertion_type"', 401)
     }
 
     try {
-      const payload = jwtEthVerify(clientAssertion.client_assertion)
-      const verified = (err: any, user: any, info: any) => {
+      const payload = await jwtEthVerify(clientAssertion.client_assertion, this.provider)
+      const verified = (err: Error, user: JWTPayload, info: number) => {
         if (err) {
           return this.error(err)
         }
@@ -42,11 +49,11 @@ export class Strategy extends passport.Strategy {
       }
 
       this._verify(payload, verified)
-    } catch (err: any) {
+    } catch (err: unknown) {
       if (err instanceof JwtEthVerifyError) {
         return this.fail(err.message, 401)
       } else {
-        return this.error(err)
+        return this.error(err as Error)
       }
     }
   }
